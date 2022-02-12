@@ -44,9 +44,9 @@ RUN set -xeu && \
     && rm -f /tmp/apache-maven.tar.gz \
     && echo Maven Installed \
     && echo Cleaning up... \
-    && apt-get autoremove -y \
     && apt-get clean && rm -r "/var/lib/apt/lists"/*
 
+#   && apt-get autoremove -y \
 #  && ln -s ${MAVEN_HOME}/bin/mvn /usr/bin/mvn
 
 ENV PATH=${GRAALVM_HOME}/bin:${MAVEN_HOME}/bin:$PATH
