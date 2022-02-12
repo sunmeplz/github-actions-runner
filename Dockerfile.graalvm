@@ -1,0 +1,54 @@
+FROM myoung34/github-runner
+
+ARG GRAAL_VERSION=21.3.1
+ARG JAVA_VERSION=17
+ARG MAVEN_VERSION=3.8.4
+
+ARG TARGETPLATFORM
+ARG BASE_URL=https://apache.osuosl.org/maven/maven-3/${MAVEN_VERSION}/binaries
+ENV GRAALVM_HOME=/opt/graalvm
+ENV MAVEN_HOME=/opt/maven
+
+RUN set -xeu && \
+    export DEBIAN_FRONTEND=noninteractive && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        ca-certificates `# stays, not having this is just not useful` \
+        curl \
+        gcc \
+        g++ \
+        libz-dev \
+        && \
+     case ${TARGETPLATFORM} in \
+        "linux/amd64")  TARGET_ARCH="amd64"  ;; \
+        "linux/arm64") TARGET_ARCH="aarch64"  ;; \
+      esac && \
+    mkdir ${GRAALVM_HOME} && \
+    curl -fsSL "https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-${GRAAL_VERSION}/graalvm-ce-java${JAVA_VERSION}-linux-${TARGET_ARCH}-${GRAAL_VERSION}.tar.gz" \
+        | tar -zxC ${GRAALVM_HOME} --strip-components 1 && \
+    find ${GRAALVM_HOME} -name "*src.zip"  -printf "Deleting %p\n" -exec rm {} + && \
+    { test ! -d ${GRAALVM_HOME}/legal || tar czf ${GRAALVM_HOME}/legal.tgz ${GRAALVM_HOME}/legal/; } && \
+    { test ! -d ${GRAALVM_HOME}/legal || rm -r ${GRAALVM_HOME}/legal; } && \
+    rm -rf ${GRAALVM_HOME}/man `# does not exist in java11 package` && \
+    ${GRAALVM_HOME}/bin/gu install native-image && \
+    echo GraalVM Installed && \
+    \
+    mkdir -p ${MAVEN_HOME}  \
+    && echo "Downloading maven" \
+    && curl -fsSL -o /tmp/apache-maven.tar.gz https://dlcdn.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz \
+    \
+    && echo "Unziping maven" \
+    && tar -xzf /tmp/apache-maven.tar.gz -C ${MAVEN_HOME} --strip-components=1 \
+    \
+    && echo "Cleaning and setting links" \
+    && rm -f /tmp/apache-maven.tar.gz \
+    && echo Maven Installed \
+    && echo Cleaning up... \
+    && apt-get remove -y \
+        curl \
+    && apt-get autoremove -y \
+    && apt-get clean && rm -r "/var/lib/apt/lists"/*
+
+#  && ln -s ${MAVEN_HOME}/bin/mvn /usr/bin/mvn
+
+ENV PATH=${GRAALVM_HOME}/bin:${MAVEN_HOME}/bin:$PATH
