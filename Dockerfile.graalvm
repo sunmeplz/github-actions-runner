@@ -44,8 +44,6 @@ RUN set -xeu && \
     && rm -f /tmp/apache-maven.tar.gz \
     && echo Maven Installed \
     && echo Cleaning up... \
-    && apt-get remove -y \
-        curl \
     && apt-get autoremove -y \
     && apt-get clean && rm -r "/var/lib/apt/lists"/*
 
